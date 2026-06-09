@@ -51,13 +51,20 @@ function startRound() {
   model = nextRound(model);
   const to = toRenderState(model);
   const from = new Map(current.map((e) => [e.id, e]));
-  for (const entry of to) {
-    if (!from.has(entry.id)) {
-      // Entering PA: starts collapsed at the bottom edge of the screen,
-      // same x-edges as its target, so it purely grows upward.
-      from.set(entry.id, { ...entry, yTop: 1, yBottom: 1 });
-    }
-  }
+  to.forEach((entry, i) => {
+    if (from.has(entry.id)) return;
+    // Entering PA: starts collapsed at the bottom edge of the screen and
+    // grows upward. Its top edge starts as the old bottom edge of the PA
+    // above it, so the ribbon seam stays closed throughout the tween.
+    const aboveOld = from.get(to[i - 1].id);
+    from.set(entry.id, {
+      ...entry,
+      yTop: 1,
+      yBottom: 1,
+      topX0: aboveOld.botX0,
+      topX1: aboveOld.botX1,
+    });
+  });
   const progress = { t: 0 };
   animate(progress, {
     t: 1,
@@ -75,6 +82,11 @@ function startRound() {
   });
 }
 
-draw();
-view.onResize = draw;
+function fitView() {
+  view.viewSize = new paper.Size(window.innerWidth, window.innerHeight);
+  draw();
+}
+
+window.addEventListener('resize', fitView);
+fitView();
 setTimeout(startRound, config.holdMs);
