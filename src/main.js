@@ -1,50 +1,80 @@
 import paper from 'paper';
+import { animate } from 'animejs';
+import { config } from './config.js';
+import { createInitialState, nextRound } from './rounds.js';
+import { toRenderState, toCorners } from './geometry.js';
 
-// Set up paper on the canvas (the `resize` attribute in the HTML
-// keeps the canvas in sync with the window size).
 paper.setup(document.getElementById('canvas'));
+const { view } = paper;
 
-const { Path, Point, view } = paper;
+let model = createInitialState();
+let current = toRenderState(model);
+const paths = new Map(); // id -> paper.Path
 
-// Demo: a wavy line that follows a sine curve and reacts to the mouse.
-const path = new Path({
-  strokeColor: '#4fc3f7',
-  strokeWidth: 3,
-  strokeCap: 'round',
-});
+const NUM_KEYS = ['yTop', 'yBottom', 'topX0', 'topX1', 'botX0', 'botX1'];
 
-const SEGMENTS = 40;
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
 
-function buildPath() {
-  path.removeSegments();
-  for (let i = 0; i <= SEGMENTS; i++) {
-    path.add(new Point((view.size.width / SEGMENTS) * i, view.center.y));
+function lerpStates(from, to, t) {
+  return to.map((entry) => {
+    const f = from.get(entry.id);
+    const out = { id: entry.id };
+    for (const k of NUM_KEYS) out[k] = lerp(f[k], entry[k], t);
+    return out;
+  });
+}
+
+function draw() {
+  const seen = new Set();
+  for (const entry of current) {
+    seen.add(entry.id);
+    let path = paths.get(entry.id);
+    if (!path) {
+      path = new paper.Path({ closed: true, fillColor: config.fill });
+      for (let i = 0; i < 4; i++) path.add(new paper.Point(0, 0));
+      paths.set(entry.id, path);
+    }
+    const corners = toCorners(entry, view.size.width, view.size.height);
+    corners.forEach(([x, y], i) => path.segments[i].point.set(x, y));
+  }
+  for (const [id, path] of paths) {
+    if (!seen.has(id)) {
+      path.remove();
+      paths.delete(id);
+    }
   }
 }
 
-buildPath();
-
-view.onResize = buildPath;
-
-view.onFrame = (event) => {
-  for (let i = 0; i <= SEGMENTS; i++) {
-    const segment = path.segments[i];
-    const sine = Math.sin(event.time * 2 + i * 0.4);
-    segment.point.y = view.center.y + sine * 60;
+function startRound() {
+  model = nextRound(model);
+  const to = toRenderState(model);
+  const from = new Map(current.map((e) => [e.id, e]));
+  for (const entry of to) {
+    if (!from.has(entry.id)) {
+      // Entering PA: starts collapsed at the bottom edge of the screen,
+      // same x-edges as its target, so it purely grows upward.
+      from.set(entry.id, { ...entry, yTop: 1, yBottom: 1 });
+    }
   }
-  path.smooth();
-};
-
-// Click to drop a circle that fades out.
-view.onMouseDown = (event) => {
-  const circle = new Path.Circle({
-    center: event.point,
-    radius: 10,
-    fillColor: '#ff7043',
+  const progress = { t: 0 };
+  animate(progress, {
+    t: 1,
+    duration: config.transitionMs,
+    ease: 'inOutCubic',
+    onUpdate: () => {
+      current = lerpStates(from, to, progress.t);
+      draw();
+    },
+    onComplete: () => {
+      current = to;
+      draw();
+      setTimeout(startRound, config.holdMs);
+    },
   });
-  circle.onFrame = () => {
-    circle.scale(1.05);
-    circle.opacity -= 0.02;
-    if (circle.opacity <= 0) circle.remove();
-  };
-};
+}
+
+draw();
+view.onResize = draw;
+setTimeout(startRound, config.holdMs);
