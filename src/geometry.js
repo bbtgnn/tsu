@@ -31,6 +31,24 @@ export function toRenderState(pas) {
   return entries;
 }
 
+// Maximal axis-aligned rectangle inscribed in a render entry (a
+// parallelogram with horizontal top/bottom edges), anchored to the top
+// edge. Width at any y is constant (W); spanning down by a fraction dy of
+// the height shears the usable x-range by |d|*dy, so the area
+// (W - |d|*dy) * dy peaks at dy = W / (2|d|), clamped to the full height.
+export function inscribedRect(entry) {
+  const W = entry.topX1 - entry.topX0;
+  const d = entry.botX0 - entry.topX0; // horizontal shear, top -> bottom
+  const dy = d === 0 ? 1 : Math.min(1, W / (2 * Math.abs(d)));
+  const shear = Math.abs(d) * dy;
+  return {
+    x0: d > 0 ? entry.topX0 + shear : entry.topX0,
+    x1: d > 0 ? entry.topX1 : entry.topX1 - shear,
+    y0: entry.yTop,
+    y1: entry.yTop + dy * (entry.yBottom - entry.yTop),
+  };
+}
+
 // Render entry (fractions) -> 4 pixel corners, clockwise from top-left.
 export function toCorners(entry, width, height) {
   return [

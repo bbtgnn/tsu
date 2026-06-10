@@ -2,7 +2,8 @@ import paper from 'paper';
 import { animate } from 'animejs';
 import { config } from './config.js';
 import { createInitialState, nextRound } from './rounds.js';
-import { toRenderState, toCorners } from './geometry.js';
+import { toRenderState, toCorners, inscribedRect } from './geometry.js';
+import logoUrl from '../assets/tsu-logo.svg';
 
 paper.setup(document.getElementById('canvas'));
 const { view } = paper;
@@ -10,6 +11,14 @@ const { view } = paper;
 let model = createInitialState();
 let current = toRenderState(model);
 const paths = new Map(); // id -> paper.Path
+let logo = null;
+
+paper.project.importSVG(logoUrl, {
+  onLoad: (item) => {
+    logo = item;
+    draw();
+  },
+});
 
 const NUM_KEYS = ['yTop', 'yBottom', 'topX0', 'topX1', 'botX0', 'botX1'];
 
@@ -45,6 +54,24 @@ function draw() {
       paths.delete(id);
     }
   }
+  placeLogo();
+}
+
+// Fit the logo (aspect preserved) into the rectangle inscribed in the top
+// PA, snapped to the rectangle's top-left corner.
+function placeLogo() {
+  if (!logo || current.length === 0) return;
+  const r = inscribedRect(current[0]);
+  const { width, height } = view.size;
+  const rect = new paper.Rectangle(
+    r.x0 * width,
+    r.y0 * height,
+    (r.x1 - r.x0) * width,
+    (r.y1 - r.y0) * height,
+  );
+  logo.fitBounds(rect);
+  logo.bounds.topLeft = rect.topLeft;
+  logo.bringToFront();
 }
 
 function startRound() {
