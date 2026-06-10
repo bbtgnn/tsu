@@ -27,6 +27,23 @@ npm run dev
 - `npm run preview` — preview the production build
 - `node --test "tests/*.test.js"` — run unit tests for the pure modules
 
+## GitHub Pages
+
+Pushes to `main` deploy automatically via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+1. Push this repo to GitHub (the repository name becomes the URL path, e.g. `https://<user>.github.io/tsu/`).
+2. In the repo **Settings → Pages**, set **Source** to **GitHub Actions**.
+3. Push to `main` (or run the workflow manually under **Actions**).
+
+To preview the production build locally with the same base path GitHub Pages uses:
+
+```bash
+BASE_PATH=/tsu/ npm run build
+BASE_PATH=/tsu/ npm run preview
+```
+
+Replace `tsu` with your repository name if it differs.
+
 ## Structure
 
 - `src/config.js` — all tunables (counts, durations, size constraints, colors)

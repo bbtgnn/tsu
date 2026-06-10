@@ -22,8 +22,23 @@ paper.project.importSVG(logoUrl, {
 
 const NUM_KEYS = ['yTop', 'yBottom', 'topX0', 'topX1', 'botX0', 'botX1'];
 
+// During a transition the lerped top PA can momentarily have near-zero
+// shear, whose inscribed rect spans almost the whole canvas and makes the
+// logo balloon. Instead we tween between the rest-state rects; this holds
+// the eased lerp of the from/to inscribed rects while animating.
+let logoRect = null;
+
 function lerp(a, b, t) {
   return a + (b - a) * t;
+}
+
+function lerpRect(a, b, t) {
+  return {
+    x0: lerp(a.x0, b.x0, t),
+    x1: lerp(a.x1, b.x1, t),
+    y0: lerp(a.y0, b.y0, t),
+    y1: lerp(a.y1, b.y1, t),
+  };
 }
 
 function lerpStates(from, to, t) {
@@ -61,7 +76,7 @@ function draw() {
 // PA, snapped to the rectangle's top-left corner.
 function placeLogo() {
   if (!logo || current.length === 0) return;
-  const r = inscribedRect(current[0]);
+  const r = logoRect ?? inscribedRect(current[0]);
   const { width, height } = view.size;
   const rect = new paper.Rectangle(
     r.x0 * width,
@@ -92,6 +107,10 @@ function startRound() {
       topX1: aboveOld.botX1,
     });
   });
+  // Tween the logo between the two rest-state rects (the top PA never
+  // enters or exits, so it is always present in both states).
+  const logoFrom = inscribedRect(from.get(to[0].id));
+  const logoTo = inscribedRect(to[0]);
   const progress = { t: 0 };
   animate(progress, {
     t: 1,
@@ -99,10 +118,12 @@ function startRound() {
     ease: 'inOutCubic',
     onUpdate: () => {
       current = lerpStates(from, to, progress.t);
+      logoRect = lerpRect(logoFrom, logoTo, progress.t);
       draw();
     },
     onComplete: () => {
       current = to;
+      logoRect = null;
       draw();
       setTimeout(startRound, config.holdMs);
     },
