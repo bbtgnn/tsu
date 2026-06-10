@@ -59,6 +59,7 @@ Orientation flips animate naturally as edges sliding across the canvas.
 - **Heights:** random weights normalized to sum to 1 across surviving PAs; each clamped to a minimum height fraction.
 - **Edge length:** random in `[L_min, 1]`.
 - **Orientation:** random flip with a per-round probability.
+- **Minimum lifetime:** a PA must survive at least `minRoundsOn` (3) rounds before it may exit; if the exit roll wins while the bottom PA is too young, nothing enters or exits that round.
 - **Overlap repair:** if a same-orientation adjacent pair violates `L_up + L_low ≥ 1 + minOverlap`, repair deterministically (bump one length, or flip one orientation). No rejection-sampling loops.
 
 ## Animation lifecycle
@@ -74,12 +75,12 @@ Paper rebuilds each 4-segment path from the current numbers every frame (cheap).
 
 - Solid black PAs on a white background, no stroke (minimal monochrome).
 - PAs meet only along shared horizontal lines (no area overlap), so the silhouette reads as a single folded black ribbon.
-- Full-screen canvas with Paper's `resize` attribute; on window resize, fractional state is re-projected to pixels immediately. No state invalidation.
+- Full-screen canvas; `main.js` drives `view.viewSize` explicitly from a `window` resize listener, re-projecting the fractional state to pixels immediately. No state invalidation.
 
 ## Error handling & testing
 
 - `rounds.js` is pure; dev-mode `console.assert`s validate invariants after each generation: heights sum to 1, all adjacent overlaps ≥ `minOverlap`, lengths within `[L_min, 1]`, count within [1, 3].
-- No test framework for now; the generator's purity allows adding vitest later without refactoring.
+- The pure modules (`rounds.js`, `geometry.js`) are unit-tested with Node's built-in `node:test` runner (`node --test "tests/*.test.js"`), including a seeded 500-round invariant soak.
 
 ## Out of scope
 
