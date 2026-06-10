@@ -86,3 +86,23 @@ test('exiting PAs are only at the bottom, get h = 0, and are gone next round', (
   }
   assert.ok(sawExit, 'expected at least one exit in 300 rounds');
 });
+
+test('a PA survives at least minRoundsOn rounds before exiting', () => {
+  const rng = makeRng(123);
+  let state = createInitialState(rng);
+  let sawYoungBottom = false;
+  for (let round = 0; round < 1000; round++) {
+    state = nextRound(state, rng);
+    for (const pa of state) {
+      if (pa.exiting) {
+        assert.ok(
+          pa.age >= config.minRoundsOn,
+          `PA exited at age ${pa.age} (round ${round})`
+        );
+      }
+    }
+    const bottom = state[state.length - 1];
+    if (!bottom.exiting && bottom.age < config.minRoundsOn) sawYoungBottom = true;
+  }
+  assert.ok(sawYoungBottom, 'expected the rule to actually be exercised');
+});

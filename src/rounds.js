@@ -12,6 +12,7 @@ function newPa(rng) {
     h: 0,
     L: randomEdge(rng),
     orient: rng() < 0.5 ? 1 : -1,
+    age: 0,
     entering: true,
     exiting: false,
   };
@@ -43,14 +44,15 @@ export function createInitialState(rng = Math.random) {
 export function nextRound(current, rng = Math.random) {
   const pas = current
     .filter((pa) => !pa.exiting)
-    .map((pa) => ({ ...pa, entering: false }));
+    .map((pa) => ({ ...pa, entering: false, age: pa.age + 1 }));
 
   const roll = rng();
   if (roll < config.pCountUp && pas.length < config.countMax) {
     pas.push(newPa(rng)); // enters at the bottom, will grow upward
   } else if (
     roll < config.pCountUp + config.pCountDown &&
-    pas.length > config.countMin
+    pas.length > config.countMin &&
+    pas[pas.length - 1].age >= config.minRoundsOn
   ) {
     pas[pas.length - 1].exiting = true; // bottom PA shrinks away
   }

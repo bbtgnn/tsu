@@ -4,6 +4,7 @@ export const config = {
   pCountUp: 0.25,    // chance per round that a PA enters (if below countMax)
   pCountDown: 0.25,  // chance per round that the bottom PA exits (if above countMin)
   pFlip: 0.5,        // chance per PA per round of flipping slant orientation
+  minRoundsOn: 3,    // a PA must survive this many rounds before it may exit
   transitionMs: 1600,
   holdMs: 1000,
   minHeight: 0.12,   // min resting height fraction per alive PA
